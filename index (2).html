@@ -1,0 +1,560 @@
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								
+							</style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataFlow Studio + Ollama</title>
+  <style>
+    /* --- СТРИПНУТЫЙ CSS (только нужное) --- */
+    :root {
+      --bg: #0f0f13;
+      --surface: #1e1e2e;
+      --surface-2: #2a2a3e;
+      --text: #e0e0e0;
+      --accent: #4caf50;
+      --danger: #f44336;
+      --warning: #ff9800;
+      --border: #3a3a50;
+      --shadow: 0 4px 12px rgba(0,0,0,0.4);
+      --radius: 10px;
+    }
+    [data-theme="light"] {
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --surface-2: #f1f3f5;
+      --text: #212121;
+      --accent: #2e7d32;
+      --danger: #c62828;
+      --border: #e0e0e0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    #app { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    h1 { font-size: 1.4rem; font-weight: 700; }
+
+    .btn { background: var(--accent); color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .btn:hover { background: #45a049; }
+    .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: var(--danger); }
+
+    .card { background: var(--surface); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 20px; }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+
+    .form-group { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
+    input[type="text"], input[type="file"], select { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem; }
+
+    .query-input-container { display: flex; gap: 8px; margin-bottom: 16px; }
+    .query-input-container input[type="text"] { flex: 1; font-size: 1rem; }
+
+    .ai-panel { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+    .ai-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .ai-status { background: var(--surface-2); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px; }
+    .status-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+    .status-dot.offline { background: var(--danger); }
+
+    #ai-log {
+      background: #121212;
+      color: #ccc;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      max-height: 120px;
+      overflow: auto;
+      margin: 8px 0;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+    }
+
+    .ai-chat { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--surface); min-height: 100px; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .ai-msg { padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; }
+    .ai-msg.user { background: var(--accent); color: white; margin-left: auto; }
+    .ai-msg.ai { background: var(--surface-2); border: 1px solid var(--border); }
+    .ai-msg.system { background: #444; color: #ccc; font-size: 0.85rem; }
+
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--accent); color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000; display: none; max-width: 90%; }
+    .toast.error { background: var(--danger); }
+    .toast.warning { background: var(--warning); }
+
+    @media (max-width: 600px) { header { flex-direction: column; align-items: flex-start; } .btn { width: 100%; } }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>📊 DataFlow Studio</h1>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+        <button id="theme-toggle" class="btn-secondary">🌙 Тема</button>
+        <button id="ollama-toggle" class="btn-secondary">🤖 Ollama</button>
+      </div>
+    </header>
+
+    <!-- Ollama Panel -->
+    <div id="ollama-panel" style="display:none; position:fixed; top:60px; left:20px; width:380px; max-height:85vh; overflow-y:auto; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; z-index:100;">
+      <div class="card-title">⚙️ Настройки Ollama</div>
+      
+      <div class="form-group">
+        <label>API URL</label>
+        <input type="text" id="ollama-url" value="http://178.63.16.109:11434/api/chat" />
+      </div>
+
+      <div class="form-group">
+        <label>Модель</label>
+        <input type="text" id="ollama-model" list="ollama-models" value="qwen2.5-code" />
+        <datalist id="ollama-models">
+          <option value="qwen2.5-code">qwen2.5-code</option>
+          <option value="qwen2.5">qwen2.5</option>
+          <option value="llama3:latest">llama3:latest</option>
+        </datalist>
+        <button id="btn-refresh" class="btn-secondary" style="margin-top:4px;">🔄 Обновить модели</button>
+      </div>
+
+      <div class="form-group">
+        <label>Лог (дебаг)</label>
+        <div id="ai-log"></div>
+      </div>
+
+      <div class="btn-group">
+        <button id="btn-test" class="btn">🛠️ Проверить соединение</button>
+        <button id="btn-save" class="btn">💾 Сохранить</button>
+      </div>
+    </div>
+
+    <main>
+      <section id="step-1" class="card">
+        <div class="card-title">1. Загрузка данных</div>
+        
+        <div class="form-group">
+          <label>CSV</label>
+          <input type="file" id="csv-input" accept=".csv" />
+        </div>
+        
+        <div class="form-group">
+          <label>Google Sheets (ID)</label>
+          <input type="text" id="gsheet-id" placeholder="ID (например: 1a2b3c4d5e6f)" />
+        </div>
+
+        <div class="form-group">
+          <button id="btn-gsheet" class="btn">Загрузить</button>
+        </div>
+
+        <div id="load-error" style="color:var(--danger); font-size:0.9rem; display:none; margin-top:8px;"></div>
+      </section>
+
+      <section id="step-2" class="card" style="display:none;">
+        <div class="card-title">2. Обработка</div>
+        
+        <div class="query-input-container">
+          <input type="text" id="query-input" placeholder="Что сделать? (например: где сумма > 1000, отсортируй от большего к меньшему)" />
+          <button id="btn-apply" class="btn">🚀 Применить</button>
+        </div>
+
+        <div class="ai-panel">
+          <div class="ai-header">
+            <h2>🤖 AI-Агент (Ollama)</h2>
+            <div id="ai-status" class="ai-status">
+              <span class="status-dot offline"></span> <span id="ai-status-text">Ожидание</span>
+            </div>
+          </div>
+          
+          <div id="ai-log"></div>
+          
+          <div id="ai-chat" class="ai-chat">
+            <div class="ai-msg system">Привет! Я — агент DataFlow. Напиши, что нужно сделать.</div>
+          </div>
+        </div>
+
+        <div id="result-preview" style="margin-top: 16px;"></div>
+        <div style="margin-top: 10px;">
+          <span id="result-stats" style="color:var(--text-muted);">...</span>
+        </div>
+
+        <div class="btn-group" style="margin-top: 16px;">
+          <button id="btn-back" class="btn-secondary">← Назад</button>
+          <button id="btn-export-csv" class="btn">📄 Экспорт в CSV</button>
+          <button id="btn-export-xlsx" class="btn">📊 Экспорт в XLSX</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // ======== Глобальные переменные ========
+    let currentTableData = null;
+    let theme = 'dark';
+    let ollamaUrl = 'http://178.63.16.109:11434/api/chat';
+    let ollamaModel = 'qwen2.5-code';
+    let ollamaLogs = [];
+
+    // ======== Утилиты ========
+    function detectType(value) {
+      if (value === null || value === '') return 'empty';
+      if (/^\s*-?\d+(\.\d+)?\s*$/.test(value)) return 'number';
+      if (value.match(/^\d{4}-\d{2}-\d{2}/)) return 'date';
+      return 'text';
+    }
+
+    function csvParse(text) {
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length < 2) return { headers: [], rows: [] };
+      const headers = parseCSVLine(lines[0]).map(h => h.trim().replace(/^"|"$/g, ''));
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVLine(lines[i]);
+        if (cols.length === 0) continue;
+        const row = {};
+        headers.forEach((h, j) => { row[h] = (cols[j] || '').trim(); });
+        rows.push(row);
+      }
+      return { headers, rows };
+    }
+
+    function parseCSVLine(line) {
+      const res = [], cur = [];
+      let q = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { if (q && line[i + 1] === '"') { cur[cur.length - 1] += '"'; i++; } else { q = !q; } }
+        else if (c === ',' && !q) { res.push(cur.join('')); cur.length = 0; }
+        else { cur.push(c); }
+      }
+      res.push(cur.join(''));
+      return res;
+    }
+
+    function logOllama(msg, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      const log = `[${time}] ${msg}`;
+      ollamaLogs.push({ time, msg, type });
+      if (ollamaLogs.length > 40) ollamaLogs = ollamaLogs.slice(-40);
+      
+      const container = document.getElementById('ai-log');
+      if (!container) return;
+      const div = document.createElement('div');
+      div.style.color = type === 'error' ? 'var(--danger)' : (type === 'success' ? '#4caf50' : '#ccc');
+      div.style.marginBottom = '4px';
+      div.textContent = log;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = 'toast ' + type;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    // ======== Основные функции ========
+    function init() {
+      // Загрузка настроек
+      const stored = localStorage.getItem('dataflow_ollama');
+      if (stored) {
+        const settings = JSON.parse(stored);
+        ollamaUrl = settings.url || 'http://178.63.16.109:11434/api/chat';
+        ollamaModel = settings.model || 'qwen2.5-code';
+        document.getElementById('ollama-url').value = ollamaUrl;
+        document.getElementById('ollama-model').value = ollamaModel;
+        logOllama('Настройки загружены', 'success');
+      }
+
+      // Тема
+      const storedTheme = localStorage.getItem('dataflow_theme') || 'dark';
+      theme = storedTheme;
+      document.body.setAttribute('data-theme', theme);
+      document.getElementById('theme-toggle').textContent = theme === 'dark' ? '🌙 Тема' : '☀️ Светлая';
+
+      bindEvents();
+    }
+
+    function bindEvents() {
+      // Тема
+      document.getElementById('theme-toggle').addEventListener('click', () => {
+        theme = theme === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('dataflow_theme', theme);
+        document.getElementById('theme-toggle').textContent = theme === 'dark' ? '🌙 Тема' : '☀️ Светлая';
+      });
+
+      // Ollama Panel
+      document.getElementById('ollama-toggle').addEventListener('click', () => {
+        const panel = document.getElementById('ollama-panel');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+      });
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('#ollama-toggle') && !e.target.closest('#ollama-panel')) {
+          document.getElementById('ollama-panel').style.display = 'none';
+        }
+      });
+
+      // Сохранение настроек
+      document.getElementById('btn-save').addEventListener('click', () => {
+        const url = document.getElementById('ollama-url').value.trim();
+        const model = document.getElementById('ollama-model').value.trim();
+        if (!url) { showToast('Введите URL', 'error'); return; }
+        ollamaUrl = url;
+        ollamaModel = model;
+        localStorage.setItem('dataflow_ollama', JSON.stringify({ url, model }));
+        showToast('Настройки сохранены', 'success');
+      });
+
+      // Тест соединения
+      document.getElementById('btn-test').addEventListener('click', async () => {
+        logOllama(`Проверка: GET ${ollamaUrl.replace('/api/chat', '/api/tags')}`, 'info');
+        try {
+          const response = await fetch(ollamaUrl.replace('/api/chat', '/api/tags'));
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          logOllama(`ОК! Найдено моделей: ${data.models?.length || 0}`, 'success');
+          showToast('Сервер Ollama доступен', 'success');
+        } catch (err) {
+          logOllama(`Ошибка: ${err.message}`, 'error');
+          showToast(`Ошибка: ${err.message}`, 'error');
+        }
+      });
+
+      // Загрузка CSV
+      document.getElementById('csv-input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const text = await file.text();
+        const parsed = csvParse(text);
+        if (parsed.rows.length === 0) {
+          showToast('Ошибка: пустая таблица', 'error');
+          return;
+        }
+        currentTableData = { headers: parsed.headers, rows: parsed.rows };
+        processTable(file.name, parsed.headers, parsed.rows);
+        e.target.value = '';
+      });
+
+      // Google Sheets
+      document.getElementById('btn-gsheet').addEventListener('click', async () => {
+        const id = document.getElementById('gsheet-id').value.trim();
+        if (!id) { showToast('Введите ID Google Sheets', 'error'); return; }
+        const url = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv`;
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('Не удалось загрузить');
+          const text = await res.text();
+          const parsed = csvParse(text);
+          if (parsed.rows.length === 0) throw new Error('Пустая таблица');
+          currentTableData = { headers: parsed.headers, rows: parsed.rows };
+          processTable(`GoogleSheets_${id}`, parsed.headers, parsed.rows);
+          document.getElementById('gsheet-id').value = '';
+        } catch (err) {
+          showToast(`Ошибка загрузки: ${err.message}`, 'error');
+        }
+      });
+
+      // Применение запроса
+      document.getElementById('btn-apply').addEventListener('click', async () => {
+        const query = document.getElementById('query-input').value.trim();
+        if (!query) { showToast('Введите запрос', 'error'); return; }
+        if (!currentTableData) { showToast('Сначала загрузи данные', 'error'); return; }
+        addAiChatMsg(query, 'user');
+        
+        document.getElementById('ai-status-text').textContent = 'Обработка...';
+        
+        try {
+          const result = await callOllama(query);
+          if (result.success) {
+            document.getElementById('ai-status-text').textContent = 'Готов';
+            document.getElementById('ai-status-text').style.color = 'var(--accent)';
+            addAiChatMsg(result.aiResponse || 'Готово!', 'ai');
+            showToast('✅ Операция применена', 'success');
+          } else {
+            document.getElementById('ai-status-text').textContent = 'Ошибка';
+            document.getElementById('ai-status-text').style.color = 'var(--danger)';
+            addAiChatMsg(`❌ Ошибка: ${result.error}`, 'ai');
+            showToast('Ошибка AI', 'error');
+          }
+        } catch (err) {
+          document.getElementById('ai-status-text').textContent = 'Ошибка';
+          document.getElementById('ai-status-text').style.color = 'var(--danger)';
+          addAiChatMsg(`❌ Ошибка: ${err.message}`, 'ai');
+          showToast(`Ошибка: ${err.message}`, 'error');
+        }
+      });
+
+      // Экспорт
+      document.getElementById('btn-export-csv').addEventListener('click', () => {
+        if (!currentTableData) { showToast('Сначала загрузи данные', 'error'); return; }
+        const { headers, rows } = currentTableData;
+        const csv = [headers.join(','), ...rows.map(r => headers.map(h => `"${(r[h] || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dataflow_export.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('btn-export-xlsx').addEventListener('click', () => {
+        if (!currentTableData) { showToast('Сначала загрузи данные', 'error'); return; }
+        const { headers, rows } = currentTableData;
+        let html = `<!DOCTYPE html><html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table>`;
+        html += '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+        for (const row of rows) {
+          html += '<tr>' + headers.map(h => `<td>${row[h] || ''}</td>`).join('') + '</tr>';
+        }
+        html += '</table></body></html>';
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dataflow_export.xls';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('btn-back').addEventListener('click', () => {
+        document.getElementById('step-2').style.display = 'none';
+        document.getElementById('step-1').style.display = 'block';
+        document.getElementById('ai-log').innerHTML = '';
+      });
+    }
+
+    function processTable(name, headers, rows) {
+      document.getElementById('step-1').style.display = 'none';
+      document.getElementById('step-2').style.display = 'block';
+      addAiChatMsg(`Загружено: ${name} (${headers.length} колонок, ${rows.length} строк)`, 'system');
+      renderPreview();
+    }
+
+    function renderPreview() {
+      const { headers, rows } = currentTableData;
+      let html = '<table><thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+      for (let i = 0; i < Math.min(30, rows.length); i++) {
+        html += '<tr>' + headers.map(h => `<td>${rows[i][h]}</td>`).join('') + '</tr>';
+      }
+      html += '</tbody></table>';
+      document.getElementById('result-preview').innerHTML = html;
+      document.getElementById('result-stats').textContent = `${rows.length} строк`;
+    }
+
+    function addAiChatMsg(msg, role = 'ai') {
+      const chat = document.getElementById('ai-chat');
+      const div = document.createElement('div');
+      div.className = `ai-msg ${role}`;
+      div.textContent = msg;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function callOllama(query) {
+      const { headers, rows } = currentTableData;
+      const context = `Колонки: ${headers.join(', ')}  
+Типы: ${headers.map(h => `${h}: ${detectType(rows[0]?.[h] ?? '')}`).join(', ')}  
+Пример: ${JSON.stringify(rows[0])}`;
+      
+      const prompt = `Ты — аналитик. Преобразуй запрос в действие.
+
+Данные:
+${context}
+
+Запрос: "${query}"
+
+Ответь в формате JSON:
+{
+  "success": true/false,
+  "ai_response": "Человеко-читаемый ответ на русском",
+  "error": "Текст ошибки (если есть)"
+}
+
+Примеры:
+- "где доход > 1000" → { success: true, ai_response: "Фильтровано: доход > 1000" }
+- "отсортируй сумму штрафов от большего к меньшему" → { success: true, ai_response: "Отсортировано по сумме штрафов по убыванию" }
+- "покажи тренд по странам" → { success: true, ai_response: "График: тренд продаж по странам" }
+
+Важно: 
+- Если запрос понятен — success: true
+- Если неясно — success: false и напиши ошибку
+- Не добавляй лишнего текста, только JSON
+`;
+
+      const payload = {
+        model: ollamaModel,
+        messages: [
+          { role: 'system', content: 'Ты — агент DataFlow. Всегда отвечай JSON без текста.' },
+          { role: 'user', content: prompt }
+        ],
+        stream: false
+      };
+
+      logOllama(`Запрос: ${query}`, 'info');
+      logOllama(`Отправка: ${JSON.stringify(payload, null, 2)}`, 'info');
+
+      try {
+        const response = await fetch(ollamaUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const err = new Error(`HTTP ${response.status} ${response.statusText}`);
+          logOllama(`Ошибка: ${err.message}`, 'error');
+          throw err;
+        }
+
+        const data = await response.json();
+        logOllama(`Ответ от Ollama:`, 'success');
+        logOllama(JSON.stringify(data, null, 2), 'success');
+
+        // Парсинг ответа
+        try {
+          const content = data.message.content;
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+          } else {
+            return { success: false, error: 'Не найден JSON в ответе Ollama' };
+          }
+        } catch (e) {
+          return { success: false, error: `Ошибка парсинга: ${e.message}` };
+        }
+      } catch (err) {
+        logOllama(`Ошибка сети: ${err.message}`, 'error');
+        throw err;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
+							<script>
+                            	
+							</script>
+                        </body>
+                        </html>
+                    
